@@ -123,9 +123,11 @@ def parse_end_date(s: str | None, local: bool = False) -> datetime:
 
 
 def slugify(s: str) -> str:
-    """Nombre apto para archivo: solo espacios en blanco -> '_'.
-    Conserva tildes y 'ñ'/'Ñ'; solo reemplaza '/' (separador de rutas)."""
-    return re.sub(r"\s+", "_", s.strip()).replace("/", "-")
+    """Nombre apto para archivo: espacios en blanco -> '_'. Conserva tildes
+    y 'ñ'/'Ñ'; reemplaza '/' (separador de rutas) y elimina ',' (frecuente
+    en nombres geocodificados tipo "Región de Coquimbo, Chile" — sin
+    quitarla, quedaba literal en el run_tag)."""
+    return re.sub(r"\s+", "_", s.strip().replace(",", "")).replace("/", "-")
 
 
 def to_db(arr: np.ndarray) -> np.ndarray:
