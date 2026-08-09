@@ -1,0 +1,25 @@
+# Config global de flood_validation: lo que NO depende del AOI/región (eso
+# vive en regions.yaml — thresholds de AWEI/HAND, toggles de sensor, y la
+# raíz de susceptibilidad pueden variar por región; esto es compartido).
+
+stac_collections:
+  sentinel1: sentinel-1-rtc
+  sentinel2: sentinel-2-l2a
+
+# Pesos de fusión por sensor (Fase 4): cuánto aporta cada uno al puntaje de
+# confianza por píxel cuando está disponible. Sensores ausentes (nube en S2,
+# sin credenciales de Dynamic World) simplemente no votan ese período —
+# fusion.py normaliza sobre los pesos de los sensores que sí tuvieron dato.
+fusion_weights:
+  sentinel1: 0.5
+  sentinel2: 0.35
+  dynamic_world: 0.15
+
+# Cortes del puntaje de confianza fusionado -> tier (Fase 4).
+confidence_tiers:
+  high: 0.75
+  medium: 0.5
+  low: 0.25
+
+basemap: esri   # esri | osm
+buffer_tolerance_m: 100.0   # tolerancia espacial para la métrica de agreement por buffer (Fase 5)

@@ -1,0 +1,81 @@
+# Config por región/AOI para flood_validation.
+#
+# Clave = string EXACTO de --region (el mismo valor que flood_monitor.py usa
+# para geocodificar con Nominatim y para su run-tag). "default" es el
+# fallback si --region no matchea ninguna entrada.
+#
+# Identidad por región, alineada con el repo hermano
+# meteorologia-flood-projections (config.yaml / config_atacama.yaml):
+#   clave de la entrada = region.osm_geocode del hermano
+#   nombre              = region.nombre
+#   id                  = region.id (subcarpeta de outputs/<id>, o sea el
+#                         último segmento de susceptibility.source_root)
+# Así el mismo string geocodifica igual en los dos repos y el id ancla la
+# ruta del producto de susceptibilidad.
+#
+# susceptibility.source_root: raíz de outputs/<region>/ del repo hermano
+# meteorologia-flood-projections (no vive en este repo — ver su CLAUDE.md).
+# La ruta relativa de acá asume que ambos repos están clonados como
+# hermanos bajo el mismo directorio padre, que es como están hoy en este
+# entorno. La resolución de qué ciclo puntual usar (Fase 5) todavía no
+# corre en Fase 1 — esto solo declara dónde buscar.
+
+regions:
+  "Región de Coquimbo, Chile":
+    display_name: "Coquimbo"
+    nombre: "Región de Coquimbo"
+    id: coquimbo
+    map_center: null   # null = centroide del AOI
+    zoom: 12
+    susceptibility:
+      source_root: "../meteorologia-flood-projections/outputs/coquimbo"
+      sufijo_preferido: gfs
+    datasets:
+      sentinel1: true
+      sentinel2: true
+      dynamic_world: false
+    # Ver terrain.compute_hand (Fase 4) para el barrido empírico detrás de
+    # estos dos valores, verificado en vivo sobre Tongoy.
+    hand_threshold_m: 15.0
+    drainage_threshold_km2: 0.05
+    awei_variant: sh
+    confidence_threshold: 0.5
+
+  "Región de Atacama, Chile":
+    display_name: "Atacama"
+    nombre: "Región de Atacama"
+    id: atacama
+    map_center: null
+    zoom: 12
+    susceptibility:
+      source_root: "../meteorologia-flood-projections/outputs/atacama"
+      sufijo_preferido: gfs
+    datasets:
+      sentinel1: true
+      sentinel2: true
+      dynamic_world: false
+    hand_threshold_m: 15.0
+    # 0.5 km² (no el 0.05 default calibrado en Tongoy): en el relieve de
+    # Vallenar, con 0.05 casi cualquier vaguada califica como cauce y las
+    # crestas quedan con HAND bajo — el filtro dejaba pasar anegamiento
+    # falso en la cima de los cerros. Verificar % de celdas válidas en el
+    # log al ajustar: subir el umbral resta cobertura al HAND.
+    drainage_threshold_km2: 0.5
+    awei_variant: sh
+    confidence_threshold: 0.5
+
+default:
+  display_name: "default"
+  map_center: null
+  zoom: 11
+  susceptibility:
+    source_root: null   # sin producto conocido: --susceptibility es obligatorio
+    sufijo_preferido: gfs
+  datasets:
+    sentinel1: true
+    sentinel2: true
+    dynamic_world: false
+  hand_threshold_m: 15.0
+  drainage_threshold_km2: 0.05
+  awei_variant: sh
+  confidence_threshold: 0.5

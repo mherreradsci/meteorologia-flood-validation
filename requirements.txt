@@ -1,0 +1,23 @@
+# Validación del producto de susceptibilidad de anegamiento contra una capa
+# de "anegamiento real" (Sentinel-1 + Sentinel-2 + terreno + agua estacional).
+# Ubuntu 22.04 / Python 3.12. Si tu plataforma no tiene rueda manylinux para
+# rasterio, instala primero: sudo apt install -y gdal-bin libgdal-dev python3-dev
+pystac-client>=0.8
+planetary-computer>=1.0
+rasterio>=1.3.10
+affine>=2.4            # transform de rasterio/rioxarray, importado directo en terrain.py
+# <2.4: pysheds 0.5 llama a np.in1d, removido en numpy 2.4 (confirmado
+# empíricamente — 2.2.6 anda, 2.4.6 no). Subir este techo cuando pysheds lo
+# soporte.
+numpy>=1.26,<2.4
+scipy>=1.11             # metrics.py: distance_transform_edt (buffered_agreement)
+xarray>=2024.6
+rioxarray>=0.15
+geopandas>=1.0
+shapely>=2.0
+scikit-image>=0.24      # Otsu, remove_small_objects, dilation/disk
+requests>=2.32          # geocode_place (Nominatim/OSM)
+pyyaml>=6.0              # config/regions.yaml, config/validation.yaml
+pysheds>=0.4             # HAND (terrain.py)
+leafmap>=0.36            # mapa interactivo (report.py; degrada suave si falla el import)
+folium>=0.16             # leyenda/Element del mapa HTML (report.py lo importa directo)
