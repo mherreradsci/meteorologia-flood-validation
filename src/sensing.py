@@ -31,6 +31,14 @@ DEFAULT_REGION = "Región de Coquimbo, Chile"
 EPOCH = datetime.min.replace(tzinfo=timezone.utc)
 
 
+def log(msg: str) -> None:
+    """print() con fecha+hora local al frente (no UTC: es para leer la
+    consola en vivo, no para el manifiesto) — mismo formato en toda la
+    corrida para poder correlacionar mensajes con logs externos (límites
+    de rate de las APIs, cortes de red, etc.)."""
+    print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}")
+
+
 def geocode_place(place: str, region: str, buffer_km: float):
     """Geocodifica un punto de interés con Nominatim (OSM) y devuelve
     (geometry_dict, bbox_tuple) en EPSG:4326, con `buffer_km` de margen."""
@@ -49,7 +57,7 @@ def geocode_place(place: str, region: str, buffer_km: float):
         sys.exit(f"[!] Nominatim no encontró '{place}' en '{region}'. "
                  f"Prueba otro nombre o ajusta --region.")
     res = results[0]
-    print(f"[+] POI geocodificado: {res['display_name']}")
+    log(f"[+] POI geocodificado: {res['display_name']}")
     # Usamos el centro del resultado, no su boundingbox: para comunas
     # Nominatim devuelve el límite administrativo entero (~100 km de lado).
     lat_c, lon_c = float(res["lat"]), float(res["lon"])
@@ -58,7 +66,7 @@ def geocode_place(place: str, region: str, buffer_km: float):
     dlat = buffer_km / 111.32
     dlon = float(buffer_km / (111.32 * max(np.cos(np.radians(lat_c)), 0.01)))
     bbox = (lon_c - dlon, lat_c - dlat, lon_c + dlon, lat_c + dlat)
-    print(f"[+] AOI: {2 * buffer_km:.0f}x{2 * buffer_km:.0f} km alrededor de "
+    log(f"[+] AOI: {2 * buffer_km:.0f}x{2 * buffer_km:.0f} km alrededor de "
           f"({lat_c:.4f}, {lon_c:.4f})")
     geom = box(*bbox)
     return mapping(geom), bbox
@@ -102,7 +110,7 @@ def parse_end_date(s: str | None, local: bool = False) -> datetime:
     El valor devuelto siempre es UTC."""
     if s is None:
         if local:
-            print("[!] --local-time no hace nada sin fecha: el default es "
+            log("[!] --local-time no hace nada sin fecha: el default es "
                   "el instante actual, que no depende de la zona.")
         return datetime.now(timezone.utc)
     if len(s) == 10:  # "YYYY-MM-DD"
@@ -116,7 +124,7 @@ def parse_end_date(s: str | None, local: bool = False) -> datetime:
         # resto del año), cosa que un offset fijo no haría.
         end = dt.astimezone(timezone.utc)
         if local and dt.tzinfo is None:
-            print(f"[+] Corte local {dt:%Y-%m-%d %H:%M:%S} "
+            log(f"[+] Corte local {dt:%Y-%m-%d %H:%M:%S} "
                   f"({dt.astimezone():%z}) = {end:%Y-%m-%d %H:%M:%S} UTC")
         return end
     return dt.replace(tzinfo=timezone.utc)
@@ -164,7 +172,7 @@ def read_vh_db(item, bbox):
           .squeeze("band", drop=True))
     vh_db = da.copy(data=to_db(da.values))
     vh_db = vh_db.where(vh_db != DB_NODATA)
-    print(f"[+] VH leída: {vh_db.shape[1]}x{vh_db.shape[0]} px, "
+    log(f"[+] VH leída: {vh_db.shape[1]}x{vh_db.shape[0]} px, "
           f"CRS {da.rio.crs}")
     return vh_db
 
@@ -172,7 +180,7 @@ def read_vh_db(item, bbox):
 def water_threshold(vh_db, fixed: float | None) -> float:
     """Umbral fijo o automático (Otsu) sobre los valores válidos."""
     if fixed is not None:
-        print(f"[+] Umbral fijo: {fixed:.1f} dB")
+        log(f"[+] Umbral fijo: {fixed:.1f} dB")
         return fixed
     from skimage.filters import threshold_otsu
 
@@ -180,7 +188,7 @@ def water_threshold(vh_db, fixed: float | None) -> float:
     t = float(threshold_otsu(vals))
     # Otsu puede fallar en escenas casi sin agua; acotamos a un rango sensato.
     t = float(np.clip(t, -25.0, -14.0))
-    print(f"[+] Umbral Otsu (acotado): {t:.1f} dB")
+    log(f"[+] Umbral Otsu (acotado): {t:.1f} dB")
     return t
 
 
@@ -220,10 +228,10 @@ def permanent_water_mask(geom: dict, bbox, template):
         # de costa y la franja de rompiente, sin comerse humedales interiores.
         from skimage.morphology import dilation, disk
         mask = dilation(mask, disk(3))
-        print(f"[+] Agua permanente (JRC): {mask.sum():,} px enmascarados")
+        log(f"[+] Agua permanente (JRC): {mask.sum():,} px enmascarados")
         return mask
     except Exception as e:  # noqa: BLE001
-        print(f"[!] No pude cargar JRC GSW ({e}). Sigo sin enmascarar "
+        log(f"[!] No pude cargar JRC GSW ({e}). Sigo sin enmascarar "
               f"agua permanente.")
         return None
 
@@ -262,11 +270,11 @@ def slope_mask(geom: dict, bbox, template, max_slope_deg: float):
         dzdy, dzdx = np.gradient(dem.values, abs(res_y), abs(res_x))
         slope = np.degrees(np.arctan(np.hypot(dzdx, dzdy)))
         mask = np.isfinite(slope) & (slope > max_slope_deg)
-        print(f"[+] Pendiente > {max_slope_deg:.0f}° (Cop-DEM GLO-30): "
+        log(f"[+] Pendiente > {max_slope_deg:.0f}° (Cop-DEM GLO-30): "
               f"{mask.sum():,} px enmascarados")
         return mask
     except Exception as e:  # noqa: BLE001
-        print(f"[!] No pude cargar el DEM ({e}). Sigo sin máscara de "
+        log(f"[!] No pude cargar el DEM ({e}). Sigo sin máscara de "
               f"pendiente.")
         return None
 
@@ -282,7 +290,7 @@ def detect_flood(vh_db, threshold: float, perm_mask, steep_mask,
         # (parcelas lisas, pavimento, sombras) quedan descartadas.
         diff = vh_db.values - ref_db.values
         changed = np.isfinite(diff) & (diff < -change_delta)
-        print(f"[+] Criterio de cambio: {change_delta:.1f} dB de caída — "
+        log(f"[+] Criterio de cambio: {change_delta:.1f} dB de caída — "
               f"descarta {(water & ~changed).sum():,} px oscuros estables")
         water &= changed
     if perm_mask is not None:
@@ -293,6 +301,6 @@ def detect_flood(vh_db, threshold: float, perm_mask, steep_mask,
     # equivalente al viejo min_size=min_area_px (que eliminaba < min_area_px).
     water = remove_small_objects(water, max_size=min_area_px - 1)
     pct = 100.0 * water.sum() / max(np.isfinite(vh_db.values).sum(), 1)
-    print(f"[+] Anegamiento detectado: {water.sum():,} px "
+    log(f"[+] Anegamiento detectado: {water.sum():,} px "
           f"({pct:.2f}% del AOI)")
     return water

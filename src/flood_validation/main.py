@@ -17,7 +17,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sensing import load_aoi, slugify
+from sensing import load_aoi, log, slugify
 
 from . import cli, config, windows
 
@@ -63,31 +63,31 @@ def main(argv: list[str] | None = None) -> None:
     regions_cfg = config.load_regions_config(regions_path)
     validation_cfg = config.load_validation_config(validation_path)
     region_cfg = config.resolve_region_config(args.region, regions_cfg)
-    print(f"[+] Config de región resuelta: zoom={region_cfg.zoom}, "
+    log(f"[+] Config de región resuelta: zoom={region_cfg.zoom}, "
           f"HAND≤{region_cfg.hand_threshold_m} m, AWEI "
           f"{region_cfg.awei_variant}, umbral de confianza "
           f"{region_cfg.confidence_threshold}")
 
     geom, bbox = load_aoi(args)
-    print(f"[+] AOI bbox: {tuple(round(v, 4) for v in bbox)}")
+    log(f"[+] AOI bbox: {tuple(round(v, 4) for v in bbox)}")
 
     start, end = windows.resolve_window(args)
-    print(f"[+] Ventana de validación: {start:%Y-%m-%d %H:%M:%S} a "
+    log(f"[+] Ventana de validación: {start:%Y-%m-%d %H:%M:%S} a "
           f"{end:%Y-%m-%d %H:%M:%S} UTC ({(end - start).days} días)")
 
     susceptibility_path = args.susceptibility
     if susceptibility_path is not None:
-        print(f"[+] Susceptibilidad: ruta explícita {susceptibility_path}")
+        log(f"[+] Susceptibilidad: ruta explícita {susceptibility_path}")
     elif region_cfg.susceptibility.source_root:
-        print(f"[+] Susceptibilidad: se resolverá desde "
+        log(f"[+] Susceptibilidad: se resolverá desde "
               f"{region_cfg.susceptibility.source_root} (sufijo preferido: "
               f"{region_cfg.susceptibility.sufijo_preferido}) — la "
               f"resolución de ciclo llega en la Fase 5.")
     else:
-        print("[!] Sin --susceptibility ni source_root configurado para "
+        log("[!] Sin --susceptibility ni source_root configurado para "
               "esta región: no habrá con qué comparar en fases futuras.")
 
-    print("[+] Sensores configurados — Sentinel-1: "
+    log("[+] Sensores configurados — Sentinel-1: "
           f"{'on' if region_cfg.datasets.sentinel1 else 'off'}, "
           f"Sentinel-2: {'on' if region_cfg.datasets.sentinel2 else 'off'}, "
           f"Dynamic World: "
@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> None:
           "fases que agregan cada sensor).")
 
     tag = build_run_tag(args, bbox, start, end)
-    print(f"[+] ID de corrida: {tag}")
+    log(f"[+] ID de corrida: {tag}")
 
     manifest = {
         "run_tag": tag,
@@ -161,7 +161,7 @@ def main(argv: list[str] | None = None) -> None:
             else:
                 sensors["sentinel1"] = {"acquisitions": [], "skipped": []}
         else:
-            print("[i] Sentinel-1 desactivado para esta región (config).")
+            log("[i] Sentinel-1 desactivado para esta región (config).")
 
         if region_cfg.datasets.sentinel2:
             from . import optical_layer
@@ -189,10 +189,10 @@ def main(argv: list[str] | None = None) -> None:
             else:
                 sensors["sentinel2"] = {"acquisitions": [], "skipped": []}
         else:
-            print("[i] Sentinel-2 desactivado para esta región (config).")
+            log("[i] Sentinel-2 desactivado para esta región (config).")
 
         if region_cfg.datasets.dynamic_world:
-            print("[i] dynamic_world: habilitado en config pero todavía "
+            log("[i] dynamic_world: habilitado en config pero todavía "
                   "sin módulo (llega en una fase siguiente) — se ignora "
                   "esta corrida.")
 
@@ -236,7 +236,7 @@ def main(argv: list[str] | None = None) -> None:
                     sufijo_preferido=region_cfg.susceptibility.sufijo_preferido,
                     start=start, end=end, base_dir=cli.REPO_ROOT)
                 if ciclo is None:
-                    print("[!] Susceptibilidad: no hay ruta explícita ni "
+                    log("[!] Susceptibilidad: no hay ruta explícita ni "
                           "ningún ciclo que cubra esta ventana — sin nada "
                           "que comparar.")
                 else:
@@ -264,7 +264,7 @@ def main(argv: list[str] | None = None) -> None:
                         metrics_path.write_text(json.dumps(
                             {**validation_info, **metrics_dict},
                             indent=2, ensure_ascii=False))
-                        print(f"[+] Métricas de validación: {metrics_path}")
+                        log(f"[+] Métricas de validación: {metrics_path}")
                         validation_info["metrics_path"] = str(metrics_path)
 
         # Fase 6: bundle de reporte (mapa HTML, CSV, Markdown) — solo si
@@ -312,10 +312,10 @@ def main(argv: list[str] | None = None) -> None:
     manifest_path = args.output_dir / f"run_manifest-{tag}.json"
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False))
-    print(f"[+] Manifiesto: {manifest_path}")
+    log(f"[+] Manifiesto: {manifest_path}")
     estado = "Dry-run listo (sin procesamiento de rásters)" if args.dry_run \
         else "Corrida lista"
-    print(f"[✓] {estado}.")
+    log(f"[✓] {estado}.")
 
 
 if __name__ == "__main__":

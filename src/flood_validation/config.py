@@ -14,6 +14,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from sensing import log
+
 
 @dataclass
 class SusceptibilityConfig:
@@ -144,7 +146,7 @@ def resolve_region_config(region: str,
     if region in regions:
         return regions[region]
     if "default" in regions:
-        print(f"[!] No hay entrada en regions.yaml para '{region}': uso "
+        log(f"[!] No hay entrada en regions.yaml para '{region}': uso "
               f"la entrada 'default'.")
         return regions["default"]
     raise SystemExit(

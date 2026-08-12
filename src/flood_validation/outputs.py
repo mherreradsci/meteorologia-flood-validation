@@ -13,6 +13,8 @@ from pathlib import Path
 
 import numpy as np
 
+from sensing import log
+
 
 def write_geotiff_geojson(template, flood: np.ndarray, output_dir: Path,
                           tag: str, prefix: str) -> dict[str, Path | None]:
@@ -42,7 +44,7 @@ def write_geotiff_geojson(template, flood: np.ndarray, output_dir: Path,
         geojson = output_dir / f"{prefix}_{tag}.geojson"
         gdf.to_file(geojson, driver="GeoJSON")
 
-    print(f"[+] {prefix}: GeoTIFF {tif}" +
+    log(f"[+] {prefix}: GeoTIFF {tif}" +
          (f", GeoJSON {geojson} ({len(geoms)} polígonos)" if geoms
           else " (sin polígonos de anegamiento para vectorizar)"))
     return {"tif": tif, "geojson": geojson}
@@ -84,7 +86,7 @@ def write_tiered_geotiff_geojson(template, tier: np.ndarray, output_dir: Path,
         geojson = output_dir / f"{prefix}_{tag}.geojson"
         gdf.to_file(geojson, driver="GeoJSON")
 
-    print(f"[+] {prefix}: GeoTIFF {tif}" +
+    log(f"[+] {prefix}: GeoTIFF {tif}" +
          (f", GeoJSON {geojson} ({len(geoms)} polígonos)" if geoms
           else " (sin polígonos para vectorizar)"))
     return {"tif": tif, "geojson": geojson}

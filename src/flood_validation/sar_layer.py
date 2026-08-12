@@ -22,7 +22,7 @@ from datetime import datetime
 
 import numpy as np
 
-from sensing import (EPOCH, detect_flood, permanent_water_mask,
+from sensing import (EPOCH, detect_flood, log, permanent_water_mask,
                      read_vh_db, slope_mask, stac_catalog,
                      water_threshold)
 
@@ -77,10 +77,10 @@ def build_real_flood_layer(
     """
     items = search_s1_window(geom, start, end)
     if not items:
-        print(f"[!] Sentinel-1: sin escenas entre {start:%Y-%m-%d} y "
+        log(f"[!] Sentinel-1: sin escenas entre {start:%Y-%m-%d} y "
               f"{end:%Y-%m-%d} para este AOI.")
         return None
-    print(f"[+] Sentinel-1: {len(items)} escena(s) en la ventana.")
+    log(f"[+] Sentinel-1: {len(items)} escena(s) en la ventana.")
 
     template = None
     perm_mask = steep_mask = None
@@ -90,7 +90,7 @@ def build_real_flood_layer(
 
     for item in items:
         props = item.properties
-        print(f"[+] Sentinel-1 {item.id}: "
+        log(f"[+] Sentinel-1 {item.id}: "
               f"{(item.datetime or EPOCH):%Y-%m-%d %H:%M:%S} UTC "
               f"(órbita relativa {props.get('sat:relative_orbit')}, "
               f"{props.get('sat:orbit_state')})")
@@ -113,7 +113,7 @@ def build_real_flood_layer(
             water = detect_flood(vh_db, thr, perm_mask, steep_mask,
                                  min_area_px)
         except Exception as e:  # noqa: BLE001
-            print(f"[!] Sentinel-1: no pude usar la escena {item.id} "
+            log(f"[!] Sentinel-1: no pude usar la escena {item.id} "
                   f"({e}). Sigo con las demás.")
             skipped.append(item.id)
             continue
@@ -128,11 +128,11 @@ def build_real_flood_layer(
         ))
 
     if union is None:
-        print("[!] Sentinel-1: ninguna escena de la ventana se pudo leer.")
+        log("[!] Sentinel-1: ninguna escena de la ventana se pudo leer.")
         return None
 
     pct = 100.0 * union.sum() / max(np.isfinite(template.values).sum(), 1)
-    print(f"[+] Sentinel-1 (unión de {len(acquisitions)} escena(s), "
+    log(f"[+] Sentinel-1 (unión de {len(acquisitions)} escena(s), "
           f"{len(skipped)} salteada(s)): {union.sum():,} px anegados "
           f"({pct:.2f}% del AOI)")
     return SarLayerResult(flood=union, template=template,

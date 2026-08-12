@@ -34,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
-from sensing import stac_catalog
+from sensing import log, stac_catalog
 
 # Margen del clip STAC en grados: más generoso que el 0.02 de
 # permanent_water_mask/slope_mask porque acá además hay que cubrir el
@@ -109,13 +109,13 @@ def compute_hand(geom: dict, bbox, template,
         interior, n_streams = _hand_from_padded_dem(
             dem_padded, template.shape, drainage_threshold_km2)
         pct_valid = 100.0 * np.isfinite(interior).mean()
-        print(f"[+] HAND calculado (umbral de cauce "
+        log(f"[+] HAND calculado (umbral de cauce "
               f"{drainage_threshold_km2:.3g} km², {n_streams:,} celdas de "
               f"cauce en la grilla con margen): {pct_valid:.1f}% de celdas "
               f"válidas")
         return interior
     except Exception as e:  # noqa: BLE001
-        print(f"[!] No pude calcular HAND ({e}). Sigo sin filtro de "
+        log(f"[!] No pude calcular HAND ({e}). Sigo sin filtro de "
               f"plausibilidad de terreno.")
         return None
 
@@ -190,6 +190,6 @@ def hand_implausible_mask(
     if hand is None:
         return None
     mask = np.isfinite(hand) & (hand > hand_threshold_m)
-    print(f"[+] HAND > {hand_threshold_m:.0f} m sobre el cauce más cercano: "
+    log(f"[+] HAND > {hand_threshold_m:.0f} m sobre el cauce más cercano: "
           f"{mask.sum():,} px descartados por implausibles")
     return mask

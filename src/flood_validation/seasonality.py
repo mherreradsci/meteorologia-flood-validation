@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from sensing import stac_catalog
+from sensing import log, stac_catalog
 
 # Mismo margen que permanent_water_mask/slope_mask en flood_monitor.py.
 JRC_PAD_DEG = 0.02
@@ -59,10 +59,10 @@ def seasonal_water_mask(geom: dict, bbox, template,
         seas = seas.rio.reproject_match(template)
 
         mask = np.isfinite(seas.values) & (seas.values >= min_months)
-        print(f"[+] Agua estacional/de riego (JRC seasonality ≥{min_months} "
+        log(f"[+] Agua estacional/de riego (JRC seasonality ≥{min_months} "
               f"meses/año): {mask.sum():,} px")
         return mask
     except Exception as e:  # noqa: BLE001
-        print(f"[!] No pude cargar JRC seasonality ({e}). Sigo sin "
+        log(f"[!] No pude cargar JRC seasonality ({e}). Sigo sin "
               f"distinguir agua estacional.")
         return None

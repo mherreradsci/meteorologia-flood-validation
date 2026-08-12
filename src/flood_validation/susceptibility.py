@@ -36,6 +36,8 @@ from pathlib import Path
 
 import numpy as np
 
+from sensing import log
+
 PROJECTION_HORIZON = timedelta(hours=72)
 # mapa_anegamientos_gfs_extension_20260730_18utc_20260730-190146.tif
 _NAME_RE = re.compile(
@@ -114,7 +116,7 @@ def load_susceptibility(path: Path, template, bbox) -> np.ndarray | None:
     o no se puede leer — mismo fallo suave que las capas de sensor y las
     máscaras de plausibilidad."""
     if not Path(path).exists():
-        print(f"[!] Susceptibilidad: no existe {path}.")
+        log(f"[!] Susceptibilidad: no existe {path}.")
         return None
     try:
         import rioxarray
@@ -129,10 +131,10 @@ def load_susceptibility(path: Path, template, bbox) -> np.ndarray | None:
         da = da.rio.clip_box(*pbbox, crs="EPSG:4326")
         reproj = da.rio.reproject_match(template, resampling=Resampling.nearest)
         mask = np.isfinite(reproj.values) & (reproj.values > 0.5)
-        print(f"[+] Susceptibilidad cargada desde {path}: "
+        log(f"[+] Susceptibilidad cargada desde {path}: "
               f"{mask.sum():,} px susceptibles ({100 * mask.mean():.2f}% "
               f"del AOI)")
         return mask
     except Exception as e:  # noqa: BLE001
-        print(f"[!] No pude cargar la susceptibilidad desde {path} ({e}).")
+        log(f"[!] No pude cargar la susceptibilidad desde {path} ({e}).")
         return None

@@ -31,7 +31,7 @@ from datetime import datetime
 
 import numpy as np
 
-from sensing import EPOCH, stac_catalog
+from sensing import EPOCH, log, stac_catalog
 
 # Reflectancia de superficie Sentinel-2 L2A: DN / 10000 -> [0, 1].
 S2_REFLECTANCE_SCALE = 10000.0
@@ -135,10 +135,10 @@ def build_optical_water_layer(
     """
     items = search_s2_window(geom, start, end, collection)
     if not items:
-        print(f"[!] Sentinel-2: sin escenas entre {start:%Y-%m-%d} y "
+        log(f"[!] Sentinel-2: sin escenas entre {start:%Y-%m-%d} y "
               f"{end:%Y-%m-%d} para este AOI.")
         return None
-    print(f"[+] Sentinel-2: {len(items)} escena(s) en la ventana "
+    log(f"[+] Sentinel-2: {len(items)} escena(s) en la ventana "
           f"(AWEI {awei_variant}).")
 
     from rasterio.enums import Resampling
@@ -154,16 +154,16 @@ def build_optical_water_layer(
             water, clear, scene_template = _detect_scene(
                 item, bbox, awei_variant)
         except Exception as e:  # noqa: BLE001
-            print(f"[!] Sentinel-2: no pude usar la escena {item.id} "
+            log(f"[!] Sentinel-2: no pude usar la escena {item.id} "
                   f"({e}). Sigo con las demás.")
             skipped.append(item.id)
             continue
 
         clear_pct = 100.0 * clear.sum() / max(clear.size, 1)
-        print(f"[+] Sentinel-2 {item.id}: {clear_pct:.1f}% despejado "
+        log(f"[+] Sentinel-2 {item.id}: {clear_pct:.1f}% despejado "
               f"(nube catálogo {cloud_prop if cloud_prop is not None else '?'}%)")
         if clear.sum() == 0:
-            print(f"[!] Sentinel-2: {item.id} sin píxeles despejados "
+            log(f"[!] Sentinel-2: {item.id} sin píxeles despejados "
                   f"(nube/sombra/nieve cubren todo el recorte). Salteada.")
             skipped.append(item.id)
             continue
@@ -186,12 +186,12 @@ def build_optical_water_layer(
         ))
 
     if union is None:
-        print("[!] Sentinel-2: ninguna escena de la ventana tuvo "
+        log("[!] Sentinel-2: ninguna escena de la ventana tuvo "
               "cobertura despejada utilizable.")
         return None
 
     pct = 100.0 * union.sum() / max(np.isfinite(template.values).sum(), 1)
-    print(f"[+] Sentinel-2 (unión de {len(acquisitions)} escena(s), "
+    log(f"[+] Sentinel-2 (unión de {len(acquisitions)} escena(s), "
           f"{len(skipped)} salteada(s)): {union.sum():,} px anegados "
           f"({pct:.2f}% del AOI)")
     return OpticalLayerResult(flood=union, template=template,

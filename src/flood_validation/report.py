@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from sensing import log
+
 TIER_LABELS = {1: "baja", 2: "media", 3: "alta"}
 TIER_COLORS = {1: "#ffeb3b", 2: "#ff9800", 3: "#e53935"}
 
@@ -164,10 +166,10 @@ def build_html_map(ctx: ReportContext, output_dir: Path) -> Path | None:
 
         html_path = output_dir / f"flood_map-{ctx.tag}.html"
         m.to_html(str(html_path))
-        print(f"[+] Mapa interactivo: {html_path}")
+        log(f"[+] Mapa interactivo: {html_path}")
         return html_path
     except Exception as e:  # noqa: BLE001
-        print(f"[!] No pude generar el mapa HTML ({e}). Usa los GeoJSON "
+        log(f"[!] No pude generar el mapa HTML ({e}). Usa los GeoJSON "
               f"en QGIS/geojson.io.")
         return None
 
@@ -238,7 +240,7 @@ def write_csv_summary(ctx: ReportContext, output_dir: Path) -> Path:
         writer = csv_module.DictWriter(f, fieldnames=list(fila.keys()))
         writer.writeheader()
         writer.writerow(fila)
-    print(f"[+] Resumen CSV: {csv_path}")
+    log(f"[+] Resumen CSV: {csv_path}")
     return csv_path
 
 
@@ -359,5 +361,5 @@ def write_markdown_report(ctx: ReportContext, output_dir: Path,
     ]
 
     md_path.write_text("\n".join(partes), encoding="utf-8")
-    print(f"[+] Reporte Markdown: {md_path}")
+    log(f"[+] Reporte Markdown: {md_path}")
     return md_path

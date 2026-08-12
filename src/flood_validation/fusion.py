@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from sensing import log
+
 from . import seasonality, terrain
 
 TIER_SECA, TIER_BAJA, TIER_MEDIA, TIER_ALTA = 0, 1, 2, 3
@@ -53,7 +55,7 @@ def fuse(sar_result, optical_result, geom: dict, bbox, *,
     disponibles = {"sentinel1": sar_result, "sentinel2": optical_result}
     disponibles = {n: r for n, r in disponibles.items() if r is not None}
     if not disponibles:
-        print("[!] Fusión: ningún sensor tiene datos para esta ventana/AOI, "
+        log("[!] Fusión: ningún sensor tiene datos para esta ventana/AOI, "
               "no hay nada que fusionar.")
         return None
 
@@ -82,7 +84,7 @@ def fuse(sar_result, optical_result, geom: dict, bbox, *,
         sensores_usados.append(nombre)
 
     if peso_total <= 0:
-        print("[!] Fusión: los sensores con datos tienen peso 0 en "
+        log("[!] Fusión: los sensores con datos tienen peso 0 en "
               "fusion_weights, no hay nada que ponderar.")
         return None
     confidence = (agua_ponderada / peso_total).astype("float32")
@@ -117,7 +119,7 @@ def fuse(sar_result, optical_result, geom: dict, bbox, *,
     tier[confidence >= media] = TIER_MEDIA
     tier[confidence >= alta] = TIER_ALTA
 
-    print(f"[+] Fusión ({'+'.join(sensores_usados)}): "
+    log(f"[+] Fusión ({'+'.join(sensores_usados)}): "
          f"alta={int((tier == TIER_ALTA).sum()):,} "
          f"media={int((tier == TIER_MEDIA).sum()):,} "
          f"baja={int((tier == TIER_BAJA).sum()):,} px "
