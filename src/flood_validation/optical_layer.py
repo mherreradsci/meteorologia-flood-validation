@@ -31,7 +31,7 @@ from datetime import datetime
 
 import numpy as np
 
-from sensing import EPOCH, log, stac_catalog
+from sensing import EPOCH, aoi_grid_mask, log, stac_catalog
 
 # Reflectancia de superficie Sentinel-2 L2A: DN / 10000 -> [0, 1].
 S2_REFLECTANCE_SCALE = 10000.0
@@ -144,6 +144,7 @@ def build_optical_water_layer(
     from rasterio.enums import Resampling
 
     template = None
+    aoi_mask = None
     union = None
     acquisitions: list[Acquisition] = []
     skipped: list[str] = []
@@ -170,11 +171,18 @@ def build_optical_water_layer(
 
         if template is None:
             template = scene_template
+            aoi_mask = aoi_grid_mask(geom, template)
+            log(f"[+] AOI real (polígono sobre la grilla): "
+                  f"{aoi_mask.sum():,} px")
             water_aligned = water
         else:
             carrier = scene_template.copy(data=water.astype("float32"))
             water_aligned = carrier.rio.reproject_match(
                 template, resampling=Resampling.nearest).values > 0.5
+        # Recorte al AOI real, mismo criterio que sensing.detect_flood:
+        # sin esto, escenas con distinta cobertura pueden aportar píxeles
+        # fuera del polígono y el % de la unión puede superar el 100%.
+        water_aligned &= aoi_mask
 
         union = water_aligned if union is None else (union | water_aligned)
         acquisitions.append(Acquisition(
@@ -190,7 +198,7 @@ def build_optical_water_layer(
               "cobertura despejada utilizable.")
         return None
 
-    pct = 100.0 * union.sum() / max(np.isfinite(template.values).sum(), 1)
+    pct = 100.0 * union.sum() / max(aoi_mask.sum(), 1)
     log(f"[+] Sentinel-2 (unión de {len(acquisitions)} escena(s), "
           f"{len(skipped)} salteada(s)): {union.sum():,} px anegados "
           f"({pct:.2f}% del AOI)")

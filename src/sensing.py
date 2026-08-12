@@ -279,8 +279,29 @@ def slope_mask(geom: dict, bbox, template, max_slope_deg: float):
         return None
 
 
+def aoi_grid_mask(geom: dict, template) -> np.ndarray:
+    """Máscara booleana (True = dentro del polígono del AOI) rasterizada
+    sobre la grilla de `template`.
+
+    No confundir con `np.isfinite(template.values)`: eso solo marca por
+    dónde pasó la escena que definió la grilla (una franja diagonal del
+    swath dentro del rectángulo del bbox), no el AOI real — y cambia de
+    escena a escena. Esta máscara es la misma sin importar qué escena
+    llegó primero, así que es la base correcta y estable para "% del
+    AOI" y para recortar detecciones que caen fuera del AOI pedido."""
+    from rasterio.features import rasterize
+    from rasterio.warp import transform_geom
+
+    geom_proj = transform_geom("EPSG:4326", str(template.rio.crs), geom)
+    mask = rasterize([(geom_proj, 1)], out_shape=template.shape,
+                     transform=template.rio.transform(), fill=0,
+                     dtype="uint8")
+    return mask.astype(bool)
+
+
 def detect_flood(vh_db, threshold: float, perm_mask, steep_mask,
-                 min_area_px: int, ref_db=None, change_delta: float = 3.0):
+                 min_area_px: int, aoi_mask: np.ndarray, ref_db=None,
+                 change_delta: float = 3.0):
     from skimage.morphology import remove_small_objects
 
     water = np.isfinite(vh_db.values) & (vh_db.values < threshold)
@@ -300,7 +321,12 @@ def detect_flood(vh_db, threshold: float, perm_mask, steep_mask,
     # skimage >= 0.26: max_size elimina parches de tamaño <= max_size,
     # equivalente al viejo min_size=min_area_px (que eliminaba < min_area_px).
     water = remove_small_objects(water, max_size=min_area_px - 1)
-    pct = 100.0 * water.sum() / max(np.isfinite(vh_db.values).sum(), 1)
+    # Recorte final al polígono real del AOI: sin esto, detecciones en la
+    # franja del bbox que queda fuera del polígono (pero dentro del
+    # rectángulo recortado) contarían como "anegamiento", y el % informado
+    # podría superar el 100% al unir escenas con distinta cobertura.
+    water &= aoi_mask
+    pct = 100.0 * water.sum() / max(aoi_mask.sum(), 1)
     log(f"[+] Anegamiento detectado: {water.sum():,} px "
           f"({pct:.2f}% del AOI)")
     return water

@@ -22,9 +22,9 @@ from datetime import datetime
 
 import numpy as np
 
-from sensing import (EPOCH, detect_flood, log, permanent_water_mask,
-                     read_vh_db, slope_mask, stac_catalog,
-                     water_threshold)
+from sensing import (EPOCH, aoi_grid_mask, detect_flood, log,
+                     permanent_water_mask, read_vh_db, slope_mask,
+                     stac_catalog, water_threshold)
 
 
 @dataclass
@@ -83,7 +83,7 @@ def build_real_flood_layer(
     log(f"[+] Sentinel-1: {len(items)} escena(s) en la ventana.")
 
     template = None
-    perm_mask = steep_mask = None
+    perm_mask = steep_mask = aoi_mask = None
     union = None
     acquisitions: list[Acquisition] = []
     skipped: list[str] = []
@@ -102,6 +102,9 @@ def build_real_flood_layer(
                 # contra ella, no por escena — son propiedades del
                 # terreno, no de la imagen.
                 template = vh_db
+                aoi_mask = aoi_grid_mask(geom, template)
+                log(f"[+] AOI real (polígono sobre la grilla): "
+                      f"{aoi_mask.sum():,} px")
                 perm_mask = permanent_water_mask(geom, bbox, template)
                 steep_mask = slope_mask(geom, bbox, template, max_slope)
             else:
@@ -111,7 +114,7 @@ def build_real_flood_layer(
                     template, resampling=Resampling.bilinear)
             thr = water_threshold(vh_db, threshold)
             water = detect_flood(vh_db, thr, perm_mask, steep_mask,
-                                 min_area_px)
+                                 min_area_px, aoi_mask)
         except Exception as e:  # noqa: BLE001
             log(f"[!] Sentinel-1: no pude usar la escena {item.id} "
                   f"({e}). Sigo con las demás.")
@@ -131,7 +134,7 @@ def build_real_flood_layer(
         log("[!] Sentinel-1: ninguna escena de la ventana se pudo leer.")
         return None
 
-    pct = 100.0 * union.sum() / max(np.isfinite(template.values).sum(), 1)
+    pct = 100.0 * union.sum() / max(aoi_mask.sum(), 1)
     log(f"[+] Sentinel-1 (unión de {len(acquisitions)} escena(s), "
           f"{len(skipped)} salteada(s)): {union.sum():,} px anegados "
           f"({pct:.2f}% del AOI)")

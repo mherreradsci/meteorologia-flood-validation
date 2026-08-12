@@ -241,7 +241,7 @@ def main(argv: list[str] | None = None) -> None:
                           "que comparar.")
                 else:
                     susceptible_mask = susc.load_susceptibility(
-                        ciclo.path, fused.template, bbox)
+                        ciclo.path, fused.template, bbox, geom)
                     validation_info = {
                         "cycle_path": str(ciclo.path),
                         "cycle_sufijo": ciclo.sufijo,

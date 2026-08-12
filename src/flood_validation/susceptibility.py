@@ -110,7 +110,7 @@ def resolve_susceptibility(
     return ciclos[0] if ciclos else None
 
 
-def load_susceptibility(path: Path, template, bbox) -> np.ndarray | None:
+def load_susceptibility(path: Path, template, bbox, geom: dict) -> np.ndarray | None:
     """Lee el raster binario y lo rasteriza (nearest — es categórico, no
     continuo) sobre la grilla de `template`. None si el archivo no existe
     o no se puede leer — mismo fallo suave que las capas de sensor y las
@@ -123,6 +123,8 @@ def load_susceptibility(path: Path, template, bbox) -> np.ndarray | None:
         import xarray as xr
         from rasterio.enums import Resampling
 
+        from sensing import aoi_grid_mask
+
         raw = rioxarray.open_rasterio(path, masked=True)
         assert isinstance(raw, xr.DataArray)
         da = raw.squeeze("band", drop=True) if "band" in raw.dims else raw
@@ -130,10 +132,15 @@ def load_susceptibility(path: Path, template, bbox) -> np.ndarray | None:
                  bbox[2] + CLIP_PAD_DEG, bbox[3] + CLIP_PAD_DEG)
         da = da.rio.clip_box(*pbbox, crs="EPSG:4326")
         reproj = da.rio.reproject_match(template, resampling=Resampling.nearest)
-        mask = np.isfinite(reproj.values) & (reproj.values > 0.5)
+        # Recorte al AOI real, mismo criterio que sensing.detect_flood/
+        # optical_layer: sin esto, "% del AOI" queda contra el tamaño
+        # completo de la grilla (que incluye relleno fuera del polígono
+        # pedido), no contra el AOI real.
+        aoi_mask = aoi_grid_mask(geom, template)
+        mask = np.isfinite(reproj.values) & (reproj.values > 0.5) & aoi_mask
+        pct = 100.0 * mask.sum() / max(aoi_mask.sum(), 1)
         log(f"[+] Susceptibilidad cargada desde {path}: "
-              f"{mask.sum():,} px susceptibles ({100 * mask.mean():.2f}% "
-              f"del AOI)")
+              f"{mask.sum():,} px susceptibles ({pct:.2f}% del AOI)")
         return mask
     except Exception as e:  # noqa: BLE001
         log(f"[!] No pude cargar la susceptibilidad desde {path} ({e}).")
