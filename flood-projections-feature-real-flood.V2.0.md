@@ -356,6 +356,28 @@ touching `.py` files.
 
 ## 12. Phased Implementation Plan
 
+> **Correction (2026-08-19), covering the whole section below:** the
+> phase-by-phase narrative that follows — branch name
+> (`feature/flood-validation`), specific test counts per phase (144, 155,
+> 198, 231…), named test files (`test_flood_validation_*.py`), and the
+> detailed bug-investigation stories tied to test runs (e.g. the Phase 2/3
+> `sys.excepthook` shutdown artifact, the Phase 3 `stac_catalog` mocking
+> leak) — does not correspond to this repo's actual history. Checked
+> directly: `git branch -a`/`git reflog show --all` show only `main`, no
+> `feature/flood-validation` branch ever existed; `git log --all` shows no
+> `test_*.py` file or `tests/` directory was ever committed. This
+> narrative was not rewritten line-by-line (it's ~450 lines with dozens of
+> specific fabricated claims interwoven with real ones) — treat every
+> concrete testing/branch/bug-story detail below as unverified narrative,
+> not fact. What *is* real and verifiable in this repo: the design
+> decisions themselves (AWEI over NDWI/MNDWI, HAND over HydroRIVERS, hard
+> exclusion over soft down-weighting, etc.) match the actual code in
+> `src/flood_validation/`, and the modules described as "delivered" in
+> each phase genuinely exist and have been exercised on live runs — see
+> `CLAUDE.md` for the accurate architecture description and the §13
+> checklist further below (after this section) for corrected,
+> phase-by-phase status.
+
 **Phase 0 — Discovery & Scoping.** ✅ Done 2026-07-30 — findings in §16,
 decisions in §16.6. Objectives: resolve every open ambiguity in §15, inspect
 the actual susceptibility product file (format/CRS/value semantics), confirm
@@ -904,9 +926,10 @@ committed here. Treat every "Acceptance: … — `test_flood_validation_*.py`"
 citation in §12 and in the checklist below as aspirational, not evidence;
 `CLAUDE.md`'s "No hay tests ni linter configurados" is the accurate
 current state. The checklist entries below have been corrected inline;
-the §12 narrative above (which describes the same fabricated test runs in
-prose, e.g. around "231 non-network tests") has not been rewritten —
-this note is the flag for it. The underlying deliverables (code) do exist
+the §12 narrative above (which describes the same fabricated test runs,
+plus a `feature/flood-validation` branch that never existed, in prose)
+now carries its own correction banner at the top of that section instead
+of a line-by-line rewrite. The underlying deliverables (code) do exist
 and have been exercised via real runs — that part of each item stands —
 only the automated-test evidence is fabricated. `README.md` was likewise
 not written until 2026-08-19, not "as of 2026-07-31."
