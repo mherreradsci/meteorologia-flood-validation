@@ -1,0 +1,6 @@
+# Dependencias solo para desarrollo/tests — no se instalan en producción.
+# `pip install -r requirements-dev.txt` trae requirements.txt también.
+-r requirements.txt
+
+pytest>=7.0                # tests/ — pythonpath=src viene de pytest.ini,
+                          # no de un pyproject/setup (este repo no tiene)

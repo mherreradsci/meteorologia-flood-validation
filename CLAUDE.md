@@ -22,9 +22,12 @@ No hay pyproject/setup: el código se corre con `src/` como raíz de imports
 (`sensing` y `flood_validation` son top-level). Venv local con Python 3.12.
 
 ```bash
-# Instalar dependencias (si rasterio no tiene rueda manylinux:
-# sudo apt install -y gdal-bin libgdal-dev python3-dev primero)
+# Instalar dependencias de producción (si rasterio no tiene rueda
+# manylinux: sudo apt install -y gdal-bin libgdal-dev python3-dev primero)
 venv/bin/pip install -r requirements.txt
+
+# Para desarrollo/tests (trae requirements.txt + pytest)
+venv/bin/pip install -r requirements-dev.txt
 
 # Correr (desde la raíz del repo, con PYTHONPATH)
 PYTHONPATH=src venv/bin/python -m flood_validation \
@@ -40,7 +43,18 @@ PYTHONPATH=src venv/bin/python -m flood_validation \
     --aoi aoi/04-Coquimbo/Chile-Region_de_Coquimbo.geojson --days 4
 ```
 
-No hay tests ni linter configurados.
+No hay linter configurado. Tests offline (sin red/rásters) con pytest,
+`pythonpath=src` resuelto por `pytest.ini` (no hay pyproject/setup acá):
+
+```bash
+venv/bin/pytest -v
+```
+
+`tests/` recién arranca (`test_config.py`, un chequeo simple contra los
+`config/*.yaml` reales) — no es la cobertura completa que
+`flood-projections-feature-real-flood.V2.0.md` narra para cada fase; ver
+la corrección del 2026-08-19 en ese documento antes de asumir que algo ahí
+tiene test.
 
 ## Arquitectura
 

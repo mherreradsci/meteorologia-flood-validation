@@ -25,6 +25,9 @@ Luego:
 ```bash
 python3.12 -m venv venv
 venv/bin/pip install -r requirements.txt
+
+# Para desarrollo/tests (trae requirements.txt + pytest)
+venv/bin/pip install -r requirements-dev.txt
 ```
 
 No hay `pyproject.toml`/`setup.py`: el código se corre con `src/` como raíz
@@ -74,7 +77,22 @@ PYTHONPATH=src venv/bin/python -m flood_validation \
 ```
 
 Sin `--start-date-utc`/`--end-date-utc`/`--days`, la ventana por default
-son los últimos 10 días hasta ahora. No hay tests ni linter configurados.
+son los últimos 10 días hasta ahora.
+
+## Tests
+
+Offline (sin red ni rásters), con `pytest`; `pythonpath = src` viene de
+`pytest.ini`, no hace falta setear `PYTHONPATH` a mano para correrlos:
+
+```bash
+venv/bin/pip install -r requirements-dev.txt
+venv/bin/pytest -v
+```
+
+No hay linter configurado. `tests/` recién arranca (`test_config.py`,
+`test_requirements.py`) — no es la cobertura completa que
+`flood-projections-feature-real-flood.V2.0.md` narra para cada fase; ver
+la corrección del 2026-08-19 en ese documento.
 
 ## Salidas
 
