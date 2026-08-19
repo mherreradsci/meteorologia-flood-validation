@@ -1,5 +1,5 @@
 """fusion.py — combina las capas de sensor disponibles (Sentinel-1,
-Sentinel-2, más adelante Dynamic World) en una sola capa de "anegamiento
+Sentinel-2, Dynamic World) en una sola capa de "anegamiento
 real" con confianza por píxel, aplicando plausibilidad de terreno (HAND,
 terrain.py) y agua estacional/de riego (seasonality.py) como exclusiones
 duras — una sola vez sobre la grilla fusionada, no por sensor (evita
@@ -45,14 +45,17 @@ class FusionResult:
 def fuse(sar_result, optical_result, geom: dict, bbox, *,
         fusion_weights: dict[str, float],
         confidence_tiers: dict[str, float],
+        dynamic_world_result=None,
         hand_threshold_m: float = 15.0,
         drainage_threshold_km2: float = 0.05,
         seasonal_min_months: int = 2) -> FusionResult | None:
-    """`sar_result`/`optical_result` son `SarLayerResult`/
-    `OpticalLayerResult` (o `None` si ese sensor no tuvo datos). Devuelve
-    `None` solo si NINGÚN sensor tiene datos — degradación consistente con
-    cómo cada capa de sensor ya reporta `None` cuando le toca a ella."""
-    disponibles = {"sentinel1": sar_result, "sentinel2": optical_result}
+    """`sar_result`/`optical_result`/`dynamic_world_result` son
+    `SarLayerResult`/`OpticalLayerResult`/`DynamicWorldResult` (o `None` si
+    ese sensor no tuvo datos). Devuelve `None` solo si NINGÚN sensor tiene
+    datos — degradación consistente con cómo cada capa de sensor ya
+    reporta `None` cuando le toca a ella."""
+    disponibles = {"sentinel1": sar_result, "sentinel2": optical_result,
+                   "dynamic_world": dynamic_world_result}
     disponibles = {n: r for n, r in disponibles.items() if r is not None}
     if not disponibles:
         log("[!] Fusión: ningún sensor tiene datos para esta ventana/AOI, "

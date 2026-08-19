@@ -33,13 +33,14 @@ regions:
     datasets:
       sentinel1: true
       sentinel2: true
-      dynamic_world: false
+      dynamic_world: true
     # Ver terrain.compute_hand (Fase 4) para el barrido empírico detrás de
     # estos dos valores, verificado en vivo sobre Tongoy.
     hand_threshold_m: 15.0
     drainage_threshold_km2: 0.05
     awei_variant: sh
     confidence_threshold: 0.5
+    dynamic_world_water_threshold: 0.5
 
   "Región de Atacama, Chile":
     display_name: "Atacama"
@@ -53,7 +54,7 @@ regions:
     datasets:
       sentinel1: true
       sentinel2: true
-      dynamic_world: false
+      dynamic_world: true
     hand_threshold_m: 15.0
     # 0.5 km² (no el 0.05 default calibrado en Tongoy): en el relieve de
     # Vallenar, con 0.05 casi cualquier vaguada califica como cauce y las
@@ -63,6 +64,7 @@ regions:
     drainage_threshold_km2: 0.5
     awei_variant: sh
     confidence_threshold: 0.5
+    dynamic_world_water_threshold: 0.5
 
 default:
   display_name: "default"
@@ -74,8 +76,9 @@ default:
   datasets:
     sentinel1: true
     sentinel2: true
-    dynamic_world: false
+    dynamic_world: true
   hand_threshold_m: 15.0
   drainage_threshold_km2: 0.05
   awei_variant: sh
   confidence_threshold: 0.5
+  dynamic_world_water_threshold: 0.5

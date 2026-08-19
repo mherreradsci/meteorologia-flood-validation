@@ -33,7 +33,10 @@ class DatasetToggles:
     sentinel2: bool = True
     # Requiere cuenta GEE (no anónima como Planetary Computer, ver Fase 0
     # del plan): apagado por default, se prende por región cuando haya
-    # credenciales disponibles.
+    # credenciales disponibles. El Cloud Project autenticado vive en
+    # ValidationConfig.gee_project, cargado desde la variable de entorno
+    # GEE_PROJECT (.env, ver .env.example) — no acá, es una credencial de
+    # cuenta, no un umbral por AOI.
     dynamic_world: bool = False
 
 
@@ -63,6 +66,10 @@ class RegionConfig:
     drainage_threshold_km2: float = 0.05
     awei_variant: str = "sh"  # "nsh" | "sh" | "both"
     confidence_threshold: float = 0.5
+    # Umbral sobre la probabilidad de agua de Dynamic World (banda "water",
+    # 0..1) para binarizarla antes de fusion.fuse() — mismo contrato que
+    # las capas S1/S2 (flood: bool array), no probabilidad continua.
+    dynamic_world_water_threshold: float = 0.5
 
 
 @dataclass
@@ -79,6 +86,14 @@ class ValidationConfig:
         "sentinel2": "sentinel-2-l2a",
     })
     fusion_weights: FusionWeights = field(default_factory=FusionWeights)
+    # Cloud Project de Google Earth Engine ya autenticado (ver
+    # ~/.config/earthengine, `earthengine authenticate`) que
+    # dynamic_world.py usa en ee.Initialize(project=...). Se lee de la
+    # variable de entorno GEE_PROJECT (ver .env.example), no de
+    # validation.yaml — es una credencial de cuenta, no debería quedar
+    # versionada. None = Dynamic World se reporta como no disponible
+    # aunque esté prendido en config.
+    gee_project: str | None = None
     confidence_tiers: dict[str, float] = field(default_factory=lambda: {
         "high": 0.75, "medium": 0.5, "low": 0.25,
     })
@@ -127,6 +142,9 @@ def _region_from_dict(entry: dict) -> RegionConfig:
         awei_variant=entry.get("awei_variant", defaults.awei_variant),
         confidence_threshold=entry.get("confidence_threshold",
                                        defaults.confidence_threshold),
+        dynamic_world_water_threshold=entry.get(
+            "dynamic_world_water_threshold",
+            defaults.dynamic_world_water_threshold),
     )
 
 
@@ -154,6 +172,18 @@ def resolve_region_config(region: str,
         f"entrada 'default'. Agrega una de las dos antes de continuar.")
 
 
+def _gee_project_from_env() -> str | None:
+    # Import perezoso, misma convención que _load_yaml con yaml: .env es
+    # opcional (si falta python-dotenv o el archivo, simplemente no hay
+    # GEE_PROJECT y Dynamic World se reporta como no disponible).
+    import os
+
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    return os.environ.get("GEE_PROJECT") or None
+
+
 def load_validation_config(path: Path) -> ValidationConfig:
     raw = _load_yaml(path)
     defaults = ValidationConfig()
@@ -172,4 +202,5 @@ def load_validation_config(path: Path) -> ValidationConfig:
         basemap=raw.get("basemap", defaults.basemap),
         buffer_tolerance_m=raw.get("buffer_tolerance_m",
                                    defaults.buffer_tolerance_m),
+        gee_project=_gee_project_from_env(),
     )

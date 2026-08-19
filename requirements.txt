@@ -21,3 +21,7 @@ pyyaml>=6.0              # config/regions.yaml, config/validation.yaml
 pysheds>=0.4             # HAND (terrain.py)
 leafmap>=0.36            # mapa interactivo (report.py; degrada suave si falla el import)
 folium>=0.16             # leyenda/Element del mapa HTML (report.py lo importa directo)
+earthengine-api>=1.7      # dynamic_world.py; requiere cuenta GEE autenticada
+                          # aparte (ver GEE_PROJECT en .env) — import
+                          # guardado, el pipeline sigue sin ella si falta
+python-dotenv>=1.0        # carga GEE_PROJECT desde .env (config.py)

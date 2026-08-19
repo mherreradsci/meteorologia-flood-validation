@@ -5,6 +5,11 @@
 stac_collections:
   sentinel1: sentinel-1-rtc
   sentinel2: sentinel-2-l2a
+# Dynamic World no aparece acá: no es una colección STAC de Planetary
+# Computer, es Google Earth Engine (dynamic_world.py) y necesita su propio
+# Cloud Project autenticado, no acceso anónimo. Ese project id NO vive en
+# este YAML versionado (es una credencial de cuenta, no un umbral) — se lee
+# de la variable de entorno GEE_PROJECT (ver .env.example) vía config.py.
 
 # Pesos de fusión por sensor (Fase 4): cuánto aporta cada uno al puntaje de
 # confianza por píxel cuando está disponible. Sensores ausentes (nube en S2,

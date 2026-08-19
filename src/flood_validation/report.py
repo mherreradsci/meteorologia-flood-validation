@@ -70,6 +70,8 @@ class ReportContext:
     sar_skipped: list[str] = field(default_factory=list)
     optical_acquisitions: list[dict] = field(default_factory=list)
     optical_skipped: list[str] = field(default_factory=list)
+    dynamic_world_acquisitions: list[dict] = field(default_factory=list)
+    dynamic_world_skipped: list[str] = field(default_factory=list)
     fused: object = None  # fusion.FusionResult
     fused_geojson_path: Path | None = None
     susceptibility_cycle: dict | None = None
@@ -271,8 +273,9 @@ def write_markdown_report(ctx: ReportContext, output_dir: Path,
         "anegamiento (proyección a partir de lluvia pronosticada, "
         "calibrada contra eventos históricos) contra una capa de "
         "**anegamiento real estimado** a partir de sensores remotos "
-        "públicos (Sentinel-1 SAR, Sentinel-2 óptico) dentro de la "
-        "ventana de validación, fusionados con exclusiones de "
+        "públicos (Sentinel-1 SAR, Sentinel-2 óptico, opcionalmente "
+        "Dynamic World) dentro de la ventana de validación, fusionados "
+        "con exclusiones de "
         "plausibilidad de terreno (HAND) y agua estacional/de riego "
         "(JRC).",
         "",
@@ -290,6 +293,10 @@ def write_markdown_report(ctx: ReportContext, output_dir: Path,
         f"- Sentinel-2: {len(ctx.optical_acquisitions)} escena(s) usada(s)"
         + (f", {len(ctx.optical_skipped)} salteada(s)"
            if ctx.optical_skipped else ""),
+        f"- Dynamic World: {len(ctx.dynamic_world_acquisitions)} "
+        f"imagen(es) usada(s)"
+        + (f", {len(ctx.dynamic_world_skipped)} salteada(s)"
+           if ctx.dynamic_world_skipped else ""),
         f"- Sensores que aportaron a la fusión: "
         f"{', '.join(ctx.fused.sensors_used) if ctx.fused else 'ninguno'}",
         "",
@@ -356,9 +363,12 @@ def write_markdown_report(ctx: ReportContext, output_dir: Path,
         "- Sin activación conocida de Copernicus EMS para este evento: "
         "\"anegamiento real\" es en sí una estimación multi-sensor, no "
         "una verdad de terreno independiente.",
-        "- Dynamic World no está integrado (sin credenciales GEE en este "
-        "entorno).",
     ]
+    if not ctx.dynamic_world_acquisitions:
+        partes.append(
+            "- Dynamic World no aportó a esta corrida (desactivado en "
+            "config, o Earth Engine no respondió — no una falta de "
+            "integración del módulo).")
 
     md_path.write_text("\n".join(partes), encoding="utf-8")
     log(f"[+] Reporte Markdown: {md_path}")

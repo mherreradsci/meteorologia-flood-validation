@@ -126,17 +126,14 @@ def main(argv: list[str] | None = None) -> None:
     }
 
     if not args.dry_run:
-        # Fase 4: Sentinel-1 y Sentinel-2 están implementados, más la
-        # fusión de ambos con plausibilidad de terreno (HAND) y agua
-        # estacional. Dynamic World, aunque esté prendido en config,
-        # todavía no tiene módulo — se reporta como pendiente, no como
-        # error: la misma degradación gradual que FR3 pide para un sensor
-        # sin datos, aplicada acá a un sensor sin *código* todavía.
+        # Fase 4: Sentinel-1, Sentinel-2 y Dynamic World (Fase 4b, GEE)
+        # están implementados, más la fusión de los que respondan con
+        # plausibilidad de terreno (HAND) y agua estacional.
         from . import outputs as outputs_io
 
         result_outputs: dict = {}
         sensors: dict = {}
-        sar_result = optical_result = None
+        sar_result = optical_result = dynamic_world_result = None
 
         if region_cfg.datasets.sentinel1:
             from . import sar_layer
@@ -192,14 +189,37 @@ def main(argv: list[str] | None = None) -> None:
             log("[i] Sentinel-2 desactivado para esta región (config).")
 
         if region_cfg.datasets.dynamic_world:
-            log("[i] dynamic_world: habilitado en config pero todavía "
-                  "sin módulo (llega en una fase siguiente) — se ignora "
-                  "esta corrida.")
+            from . import dynamic_world
+
+            dynamic_world_result = dynamic_world.build_dynamic_world_layer(
+                geom, bbox, start, end,
+                water_threshold=region_cfg.dynamic_world_water_threshold,
+                gee_project=validation_cfg.gee_project)
+            if dynamic_world_result is not None:
+                paths = outputs_io.write_geotiff_geojson(
+                    dynamic_world_result.template,
+                    dynamic_world_result.flood, args.output_dir, tag,
+                    prefix="real_flood_dw")
+                result_outputs["dynamic_world"] = {
+                    "tif": str(paths["tif"]),
+                    "geojson": (str(paths["geojson"])
+                               if paths["geojson"] else None),
+                }
+                sensors["dynamic_world"] = {
+                    "acquisitions": [asdict(a) for a in
+                                    dynamic_world_result.acquisitions],
+                    "skipped": dynamic_world_result.skipped,
+                }
+            else:
+                sensors["dynamic_world"] = {"acquisitions": [], "skipped": []}
+        else:
+            log("[i] Dynamic World desactivado para esta región (config).")
 
         fusion_info: dict | None = None
         validation_info: dict | None = None
         fused = susceptible_mask = metrics_dict = None
-        if sar_result is not None or optical_result is not None:
+        if (sar_result is not None or optical_result is not None
+                or dynamic_world_result is not None):
             from dataclasses import asdict as _asdict
 
             from . import fusion
@@ -208,6 +228,7 @@ def main(argv: list[str] | None = None) -> None:
                 sar_result, optical_result, geom, bbox,
                 fusion_weights=_asdict(validation_cfg.fusion_weights),
                 confidence_tiers=validation_cfg.confidence_tiers,
+                dynamic_world_result=dynamic_world_result,
                 hand_threshold_m=region_cfg.hand_threshold_m,
                 drainage_threshold_km2=region_cfg.drainage_threshold_km2)
             if fused is not None:
@@ -284,6 +305,10 @@ def main(argv: list[str] | None = None) -> None:
                 optical_acquisitions=(sensors.get("sentinel2", {})
                                      .get("acquisitions", [])),
                 optical_skipped=sensors.get("sentinel2", {}).get("skipped", []),
+                dynamic_world_acquisitions=(sensors.get("dynamic_world", {})
+                                           .get("acquisitions", [])),
+                dynamic_world_skipped=(sensors.get("dynamic_world", {})
+                                      .get("skipped", [])),
                 fused=fused, fused_geojson_path=fused_geojson_path,
                 susceptibility_cycle=validation_info,
                 susceptible_mask=susceptible_mask, metrics=metrics_dict)
